@@ -172,3 +172,12 @@ func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, 
 	tries--
 	return
 }
+
+// StdClient gives a ready-to-use SafeClient instance.
+func StdClient() *SafeClient {
+	return &SafeClient{
+		true,
+		http.Client{Timeout: 5 * time.Second},
+		Backoff{100, 5000},
+	}
+}
