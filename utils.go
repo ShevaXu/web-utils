@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"net/url"
 )
 
 // RequestHook can modify the Request anyway it wants.
@@ -31,6 +32,20 @@ func NewJsonPost(url string, v interface{}, f RequestHook) (*http.Request, error
 	}
 
 	req.Header.Add("Content-Type", "application/json; charset=utf-8")
+
+	return req, nil
+}
+
+// NewJsonForm returns a Request with default "Content-type: text/plain".
+func NewJsonForm(url string, v url.Values, f RequestHook) (*http.Request, error) {
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(v.Encode())))
+	if err != nil {
+		return nil, err
+	}
+
+	if f != nil {
+		f(req)
+	}
 
 	return req, nil
 }
@@ -149,6 +164,38 @@ func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, 
 	for ; tries < maxTries; tries++ {
 		// make post request each time
 		req, err = NewJsonPost(url, v, f)
+		if err != nil {
+			return
+		}
+
+		wait = c.Next(wait)
+		status, body, err = c.RequestWithClose(req)
+		if err != nil {
+			if !c.TimeoutOnly || IsTimeoutErr(err) {
+				time.Sleep(time.Duration(wait) * time.Millisecond)
+				continue
+			}
+			return
+		}
+		if ShouldRetry(status) {
+			time.Sleep(time.Duration(wait) * time.Millisecond)
+			continue
+		}
+		return
+	}
+
+	tries--
+	return
+}
+
+// PostFormWithRetry is the plain-text form of PostJsonWithRetry.
+func (c *SafeClient) PostFormWithRetry(url string, v url.Values, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
+	var req *http.Request
+	wait := 0
+
+	for ; tries < maxTries; tries++ {
+		// make post request each time
+		req, err = NewJsonForm(url, v, f)
 		if err != nil {
 			return
 		}
