@@ -10,8 +10,12 @@ import (
 	"time"
 )
 
-// NewJsonPost returns a Request with json encoded and header set.
-func NewJsonPost(url string, v interface{}) (*http.Request, error) {
+// RequestHook can modify the Request anyway it wants.
+type RequestHook func(req *http.Request)
+
+// NewJsonPost returns a Request with json encoded and header set;
+// additional headers or cookies can be set through the RequestHook.
+func NewJsonPost(url string, v interface{}, f RequestHook) (*http.Request, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -20,6 +24,10 @@ func NewJsonPost(url string, v interface{}) (*http.Request, error) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		return nil, err
+	}
+
+	if f != nil {
+		f(req)
 	}
 
 	req.Header.Add("Content-Type", "application/json; charset=utf-8")
@@ -130,15 +138,17 @@ func (c *SafeClient) RequestWithRetry(req *http.Request, maxTries int) (tries, s
 	return
 }
 
-// PostJsonWithRetry is the special case of RequestWithRetry that initialize a Request each time to ensure Body get consumed.
-// Using other methods, forms or custom headers can do similarly.
-func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int) (tries, status int, body []byte, err error) {
+// PostJsonWithRetry is the special case of RequestWithRetry that
+// initialize a Request each time to ensure Body get consumed.
+// Additional headers or cookies can be set through the RequestHook.
+// TODO: Other methods or Content-Type other than JSON can do similarly.
+func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
 	var req *http.Request
 	wait := 0
 
 	for ; tries < maxTries; tries++ {
 		// make post request each time
-		req, err = NewJsonPost(url, v)
+		req, err = NewJsonPost(url, v, f)
 		if err != nil {
 			return
 		}
