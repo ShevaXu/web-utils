@@ -1,3 +1,5 @@
+// Package utils provides useful features to Go's http.Client following
+// some best practices for production, such as timeout, retries and backoff.
 package utils
 
 import (
@@ -7,8 +9,8 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
-	"time"
 	"net/url"
+	"time"
 )
 
 // RequestHook can modify the Request anyway it wants.
