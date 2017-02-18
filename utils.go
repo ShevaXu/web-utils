@@ -55,8 +55,8 @@ func NewJsonForm(url string, v url.Values, f RequestHook) (*http.Request, error)
 // ShouldRetry determines if the client should repeat the request
 // without modifications at any later time;
 // returns true for http 408 and 5xx status.
-// TODO: should exclude 501, 505 and 511?
 func ShouldRetry(statusCode int) bool {
+	// TODO: should exclude 501, 505 and 511?
 	return statusCode == http.StatusRequestTimeout || (statusCode >= 500 && statusCode <= 599)
 }
 
@@ -158,7 +158,6 @@ func (c *SafeClient) RequestWithRetry(req *http.Request, maxTries int) (tries, s
 // PostJsonWithRetry is the special case of RequestWithRetry that
 // initialize a Request each time to ensure Body get consumed.
 // Additional headers or cookies can be set through the RequestHook.
-// TODO: Other methods or Content-Type other than JSON can do similarly.
 func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
 	var req *http.Request
 	wait := 0
