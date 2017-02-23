@@ -89,8 +89,8 @@ func TestShouldRetry(t *testing.T) {
 
 func TestIsTimeoutErr(t *testing.T) {
 	assert.Equal(t, false, IsTimeoutErr(errors.New("not timeout")), "Normal error is not")
-	assert.Equal(t, false, IsTimeoutErr(&net.AddrError{"error", "addr"}), "AddrError is not")
-	assert.Equal(t, true, IsTimeoutErr(&net.DNSError{"error", "name", "server", true, false}), "Should be")
+	assert.Equal(t, false, IsTimeoutErr(&net.AddrError{}), "AddrError is not")
+	assert.Equal(t, true, IsTimeoutErr(&net.DNSError{IsTimeout: true}), "Should be")
 }
 
 var OkHandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
