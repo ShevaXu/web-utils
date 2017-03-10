@@ -164,12 +164,11 @@ func (c *SafeClient) DoRequest(method, url string, content []byte, maxTries int,
 
 	for ; tries < maxTries; tries++ {
 		// make a new request each time
-		var rBody *bytes.Buffer
 		if len(content) > 0 {
-			rBody = bytes.NewBuffer(content)
+			req, err = http.NewRequest(method, url, bytes.NewBuffer(content))
+		} else {
+			req, err = http.NewRequest(method, url, nil)
 		}
-		req, err = http.NewRequest(method, url, rBody)
-		//req.Body
 		if err != nil {
 			return
 		}
