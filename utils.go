@@ -155,18 +155,27 @@ func (c *SafeClient) RequestWithRetry(req *http.Request, maxTries int) (tries, s
 	return
 }
 
-// PostJsonWithRetry is the special case of RequestWithRetry that
+// DoRequest is the generalized version of RequestWithRetry that
 // initialize a Request each time to ensure Body get consumed.
 // Additional headers or cookies can be set through the RequestHook.
-func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
+func (c *SafeClient) DoRequest(method, url string, content []byte, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
 	var req *http.Request
 	wait := 0
 
 	for ; tries < maxTries; tries++ {
-		// make post request each time
-		req, err = NewJsonPost(url, v, f)
+		// make a new request each time
+		var rBody *bytes.Buffer
+		if len(content) > 0 {
+			rBody = bytes.NewBuffer(content)
+		}
+		req, err = http.NewRequest(method, url, rBody)
+		//req.Body
 		if err != nil {
 			return
+		}
+
+		if f != nil {
+			f(req)
 		}
 
 		wait = c.Next(wait)
@@ -189,36 +198,23 @@ func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, 
 	return
 }
 
-// PostFormWithRetry is the plain-text form of PostJsonWithRetry.
-func (c *SafeClient) PostFormWithRetry(url string, v url.Values, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
-	var req *http.Request
-	wait := 0
-
-	for ; tries < maxTries; tries++ {
-		// make post request each time
-		req, err = NewJsonForm(url, v, f)
-		if err != nil {
-			return
-		}
-
-		wait = c.Next(wait)
-		status, body, err = c.RequestWithClose(req)
-		if err != nil {
-			if !c.TimeoutOnly || IsTimeoutErr(err) {
-				time.Sleep(time.Duration(wait) * time.Millisecond)
-				continue
-			}
-			return
-		}
-		if ShouldRetry(status) {
-			time.Sleep(time.Duration(wait) * time.Millisecond)
-			continue
-		}
+// PostJsonWithRetry is a convenient method for JSON POST requests.
+func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
+	data, err := json.Marshal(v)
+	if err != nil {
 		return
 	}
+	return c.DoRequest("POST", url, data, maxTries, func(req *http.Request) {
+		req.Header.Add("Content-Type", "application/json; charset=utf-8")
+		if f != nil {
+			f(req)
+		}
+	})
+}
 
-	tries--
-	return
+// PostFormWithRetry is a convenient method for form POST requests.
+func (c *SafeClient) PostFormWithRetry(url string, v url.Values, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
+	return c.DoRequest("POST", url, []byte(v.Encode()), maxTries, f)
 }
 
 // StdClient gives a ready-to-use SafeClient instance.
