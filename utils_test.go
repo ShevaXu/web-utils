@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -271,15 +272,17 @@ func TestSafeClient_RequestWithRetry_Bug(t *testing.T) {
 	assert.True(t, err != nil, "Should have error")
 }
 
-var CheckHeaderHandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("x-test") == "test" {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	} else {
-		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte("Wrong header"))
-	}
-})
+func CheckHeaderHandler(header, value string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.Header.Get(header), value) { // approximate
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte("OK"))
+		} else {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Wrong header"))
+		}
+	})
+}
 
 func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 	tests := []retryTest{
@@ -315,9 +318,19 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 		},
 		{
 			closeTest{
-				CheckHeaderHandlerFunc,
+				CheckHeaderHandler("x-test", "test"),
 				http.StatusForbidden,
 				[]byte("Wrong header"),
+				false,
+			},
+			5,
+			0, // no retry if forbidden
+		},
+		{
+			closeTest{
+				CheckHeaderHandler("Content-Type", "application/json"),
+				http.StatusOK,
+				[]byte("OK"),
 				false,
 			},
 			5,
@@ -347,7 +360,7 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 	}
 
 	// hooked case
-	server := httptest.NewServer(CheckHeaderHandlerFunc)
+	server := httptest.NewServer(CheckHeaderHandler("x-test", "test"))
 	n, status, _, err := testTimeoutClient.PostJsonWithRetry(server.URL, testContent{"foo"}, 3, addTestHeader)
 	if err != nil {
 		t.Errorf("Error request: %s", err)
@@ -392,7 +405,7 @@ func TestSafeClient_PostFormWithRetry(t *testing.T) {
 		},
 		{
 			closeTest{
-				CheckHeaderHandlerFunc,
+				CheckHeaderHandler("x-test", "test"),
 				http.StatusForbidden,
 				[]byte("Wrong header"),
 				false,
@@ -424,7 +437,7 @@ func TestSafeClient_PostFormWithRetry(t *testing.T) {
 	}
 
 	// hooked case
-	server := httptest.NewServer(CheckHeaderHandlerFunc)
+	server := httptest.NewServer(CheckHeaderHandler("x-test", "test"))
 	n, status, _, err := testTimeoutClient.PostFormWithRetry(server.URL, url.Values{}, 3, addTestHeader)
 	if err != nil {
 		t.Errorf("Error request: %s", err)
