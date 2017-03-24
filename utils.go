@@ -102,13 +102,15 @@ type SafeClient struct {
 func (c *SafeClient) RequestWithClose(req *http.Request) (status int, body []byte, err error) {
 	var resp *http.Response
 
+	// Close() iff resp did return
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
 	resp, err = c.Do(req)
 	if err != nil {
 		return
 	}
-
-	// Close() iff resp did return
-	defer resp.Body.Close()
 
 	status = resp.StatusCode
 
