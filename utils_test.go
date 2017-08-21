@@ -14,9 +14,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-
 	. "github.com/ShevaXu/web-utils"
+	"github.com/ShevaXu/web-utils/assert"
 )
 
 type testContent struct {
@@ -28,11 +27,13 @@ func addTestHeader(req *http.Request) {
 }
 
 func TestNewJsonPost(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	req, err := NewJsonPost("/", testContent{"hello"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "application/json; charset=utf-8", req.Header.Get("Content-Type"), "Proper header")
+	a.Equal("application/json; charset=utf-8", req.Header.Get("Content-Type"), "Proper header")
 
 	decoder := json.NewDecoder(req.Body)
 	var c testContent
@@ -40,31 +41,33 @@ func TestNewJsonPost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error decoding the body: %s", err)
 	}
-	assert.Equal(t, c.Data, "hello", `Should respond with "hello"`)
+	a.Equal(c.Data, "hello", `Should respond with "hello"`)
 
 	req, err = NewJsonPost("/", testContent{"hello"}, addTestHeader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "test", req.Header.Get("x-test"), "Hooked header")
+	a.Equal("test", req.Header.Get("x-test"), "Hooked header")
 }
 
 func TestNewJsonForm(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	v := url.Values{}
 	req, err := NewJsonForm("/", v, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "", req.Header.Get("Content-Type"), "Proper header")
+	a.Equal("", req.Header.Get("Content-Type"), "Proper header")
 
 	body, _ := ioutil.ReadAll(req.Body)
-	assert.Equal(t, v.Encode(), string(body), "Body encoded")
+	a.Equal(v.Encode(), string(body), "Body encoded")
 
 	req, err = NewJsonPost("/", v, addTestHeader)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "test", req.Header.Get("x-test"), "Hooked header")
+	a.Equal("test", req.Header.Get("x-test"), "Hooked header")
 }
 
 type RetryTest struct {
@@ -73,6 +76,8 @@ type RetryTest struct {
 }
 
 func TestShouldRetry(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	tests := []RetryTest{
 		{200, false},
 		{400, false},
@@ -84,14 +89,16 @@ func TestShouldRetry(t *testing.T) {
 		{511, true},
 	}
 	for _, test := range tests {
-		assert.Equal(t, test.should, ShouldRetry(test.code), "Retry test fails")
+		a.Equal(test.should, ShouldRetry(test.code), "Retry test fails")
 	}
 }
 
 func TestIsTimeoutErr(t *testing.T) {
-	assert.Equal(t, false, IsTimeoutErr(errors.New("not timeout")), "Normal error is not")
-	assert.Equal(t, false, IsTimeoutErr(&net.AddrError{}), "AddrError is not")
-	assert.Equal(t, true, IsTimeoutErr(&net.DNSError{IsTimeout: true}), "Should be")
+	a := assert.NewAssert(t)
+
+	a.Equal(false, IsTimeoutErr(errors.New("not timeout")), "Normal error is not")
+	a.Equal(false, IsTimeoutErr(&net.AddrError{}), "AddrError is not")
+	a.Equal(true, IsTimeoutErr(&net.DNSError{IsTimeout: true}), "Should be")
 }
 
 var OkHandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -116,13 +123,15 @@ var TimeoutHandlerFunc = http.HandlerFunc(func(w http.ResponseWriter, r *http.Re
 })
 
 func TestBackoff_Next(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	sleep0 := testBackoff.Next(0)
-	assert.True(t, sleep0 >= minTimeout && sleep0 <= minTimeout*3, "First sleep is bounded")
+	a.True(sleep0 >= minTimeout && sleep0 <= minTimeout*3, "First sleep is bounded")
 	sleep1 := testBackoff.Next(sleep0)
 	sleep2 := testBackoff.Next(sleep1)
 	sleep3 := testBackoff.Next(sleep2)
-	assert.True(t, sleep1 >= minTimeout && sleep2 >= minTimeout, "Each sleep > base")
-	assert.True(t, sleep2 <= maxTimeout && sleep3 <= maxTimeout, "Each sleep < max")
+	a.True(sleep1 >= minTimeout && sleep2 >= minTimeout, "Each sleep > base")
+	a.True(sleep2 <= maxTimeout && sleep3 <= maxTimeout, "Each sleep < max")
 }
 
 type closeTest struct {
@@ -134,6 +143,8 @@ type closeTest struct {
 
 // TODO: how to test if Close() works
 func TestSafeClient_RequestWithClose(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	tests := []closeTest{
 		{
 			OkHandlerFunc,
@@ -160,7 +171,7 @@ func TestSafeClient_RequestWithClose(t *testing.T) {
 		status, body, err := testTimeoutClient.RequestWithClose(req)
 		if test.expectTimeout {
 			if err != nil {
-				assert.Equal(t, true, IsTimeoutErr(err), "Should be")
+				a.Equal(true, IsTimeoutErr(err), "Should be")
 			} else {
 				t.Error("Should return timeout error")
 			}
@@ -168,8 +179,8 @@ func TestSafeClient_RequestWithClose(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error request: %s", err)
 			}
-			assert.Equal(t, test.expectedCode, status, "Return code")
-			assert.Equal(t, test.expectedBody, body, "Return body")
+			a.Equal(test.expectedCode, status, "Return code")
+			a.Equal(test.expectedBody, body, "Return body")
 		}
 
 		server.Close()
@@ -191,6 +202,8 @@ type retryTest struct {
 
 // TODO: test retry wait/interval setting
 func TestSafeClient_RequestWithRetry(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	tests := []retryTest{
 		{
 			closeTest{
@@ -235,7 +248,7 @@ func TestSafeClient_RequestWithRetry(t *testing.T) {
 		n, status, body, err := testTimeoutClient.RequestWithRetry(req, test.tries)
 		if test.expectTimeout {
 			if err != nil {
-				assert.Equal(t, true, IsTimeoutErr(err), "Should be")
+				a.Equal(true, IsTimeoutErr(err), "Should be")
 			} else {
 				t.Error("Should return timeout error")
 			}
@@ -243,10 +256,10 @@ func TestSafeClient_RequestWithRetry(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error request: %s", err)
 			}
-			assert.Equal(t, test.expectedCode, status, "Returns code")
-			assert.Equal(t, test.expectedBody, body, "Returns body")
+			a.Equal(test.expectedCode, status, "Returns code")
+			a.Equal(test.expectedBody, body, "Returns body")
 		}
-		assert.Equal(t, test.expectedReries, n, "Report retried times")
+		a.Equal(test.expectedReries, n, "Report retried times")
 
 		server.Close()
 	}
@@ -256,6 +269,8 @@ func TestSafeClient_RequestWithRetry_Bug(t *testing.T) {
 	if testing.Short() {
 		t.SkipNow()
 	}
+
+	a := assert.NewAssert(t)
 
 	// TimeoutHandlerFunc causes client-side timeout, thus not drill out the request body
 	server := httptest.NewServer(Status5xxHandlerFunc) // this handler will read the request body
@@ -269,7 +284,7 @@ func TestSafeClient_RequestWithRetry_Bug(t *testing.T) {
 	_, _, _, err = testTimeoutClient.RequestWithRetry(req, 3)
 
 	//fmt.Println(err) // Post http://127.0.0.1:49833: http: ContentLength=3 with Body length 0
-	assert.True(t, err != nil, "Should have error")
+	a.True(err != nil, "Should have error")
 }
 
 func CheckHeaderHandler(header, value string) http.Handler {
@@ -285,6 +300,8 @@ func CheckHeaderHandler(header, value string) http.Handler {
 }
 
 func TestSafeClient_PostJsonWithRetry(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	tests := []retryTest{
 		{
 			closeTest{
@@ -343,7 +360,7 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 		n, status, body, err := testTimeoutClient.PostJsonWithRetry(server.URL, testContent{"foo"}, test.tries, nil)
 		if test.expectTimeout {
 			if err != nil {
-				assert.Equal(t, true, IsTimeoutErr(err), "Should be")
+				a.Equal(true, IsTimeoutErr(err), "Should be")
 			} else {
 				t.Error("Should return timeout error")
 			}
@@ -351,10 +368,10 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error request: %s", err)
 			}
-			assert.Equal(t, test.expectedCode, status, "Returns code")
-			assert.Equal(t, test.expectedBody, body, "Returns body")
+			a.Equal(test.expectedCode, status, "Returns code")
+			a.Equal(test.expectedBody, body, "Returns body")
 		}
-		assert.Equal(t, test.expectedReries, n, "Report retried times")
+		a.Equal(test.expectedReries, n, "Report retried times")
 
 		server.Close()
 	}
@@ -365,13 +382,15 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error request: %s", err)
 	}
-	assert.Equal(t, http.StatusOK, status, "Returns code")
-	assert.Equal(t, 0, n, "Report retried times")
+	a.Equal(http.StatusOK, status, "Returns code")
+	a.Equal(0, n, "Report retried times")
 
 	server.Close()
 }
 
 func TestSafeClient_PostFormWithRetry(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	tests := []retryTest{
 		{
 			closeTest{
@@ -420,7 +439,7 @@ func TestSafeClient_PostFormWithRetry(t *testing.T) {
 		n, status, body, err := testTimeoutClient.PostFormWithRetry(server.URL, url.Values{}, test.tries, nil)
 		if test.expectTimeout {
 			if err != nil {
-				assert.Equal(t, true, IsTimeoutErr(err), "Should be")
+				a.Equal(true, IsTimeoutErr(err), "Should be")
 			} else {
 				t.Error("Should return timeout error")
 			}
@@ -428,10 +447,10 @@ func TestSafeClient_PostFormWithRetry(t *testing.T) {
 			if err != nil {
 				t.Errorf("Error request: %s", err)
 			}
-			assert.Equal(t, test.expectedCode, status, "Returns code")
-			assert.Equal(t, test.expectedBody, body, "Returns body")
+			a.Equal(test.expectedCode, status, "Returns code")
+			a.Equal(test.expectedBody, body, "Returns body")
 		}
-		assert.Equal(t, test.expectedReries, n, "Report retried times")
+		a.Equal(test.expectedReries, n, "Report retried times")
 
 		server.Close()
 	}
@@ -442,21 +461,23 @@ func TestSafeClient_PostFormWithRetry(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error request: %s", err)
 	}
-	assert.Equal(t, http.StatusOK, status, "Returns code")
-	assert.Equal(t, 0, n, "Report retried times")
+	a.Equal(http.StatusOK, status, "Returns code")
+	a.Equal(0, n, "Report retried times")
 
 	server.Close()
 }
 
 func TestStdClient(t *testing.T) {
+	a := assert.NewAssert(t)
+
 	cl := StdClient()
-	assert.NotNil(t, cl, "StdClient not nil")
+	a.NotNil(cl, "StdClient not nil")
 	addr := fmt.Sprintf("%p", cl)
 
 	cl2 := StdClient()
 	addr2 := fmt.Sprintf("%p", cl2)
 
-	assert.Equal(t, cl, cl2, "Every call returns a value-equal client")
+	a.Equal(cl, cl2, "Every call returns a value-equal client")
 	//fmt.Println(addr, addr2)
-	assert.NotEqual(t, addr, addr2, "Every call returns a defferent client")
+	a.NotEqual(addr, addr2, "Every call returns a defferent client")
 }
