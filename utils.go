@@ -89,8 +89,16 @@ func (b *Backoff) Next(previous int) int {
 	return sleep
 }
 
-// SafeClient provides additional io Reader handle and request retry
-// by wrapping a http.Client (safe for concurrent use by multiple goroutines).
+// HTTPClient provides additional features upon http.Client,
+// e.g., io Reader handle and request retry;
+// it also normalize the HTTP response.
+type HTTPClient interface {
+	RequestWithRetry(req *http.Request, maxTries int) (tries, status int, body []byte, err error)
+	DoRequest(method, url string, content []byte, maxTries int, f RequestHook) (tries, status int, body []byte, err error)
+}
+
+// SafeClient implements HTTPClient; it wraps a http.Client
+// underneath (safe for concurrent use by multiple goroutines).
 type SafeClient struct {
 	TimeoutOnly bool
 	http.Client // embedded
