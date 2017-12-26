@@ -27,10 +27,10 @@ func addTestHeader(req *http.Request) {
 	req.Header.Add("x-test", "test")
 }
 
-func TestNewJsonPost(t *testing.T) {
+func TestNewJSONPost(t *testing.T) {
 	a := assert.NewAssert(t)
 
-	req, err := NewJsonPost("/", testContent{"hello"}, nil)
+	req, err := NewJSONPost("/", testContent{"hello"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,18 +44,18 @@ func TestNewJsonPost(t *testing.T) {
 	}
 	a.Equal(c.Data, "hello", `Should respond with "hello"`)
 
-	req, err = NewJsonPost("/", testContent{"hello"}, addTestHeader)
+	req, err = NewJSONPost("/", testContent{"hello"}, addTestHeader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	a.Equal("test", req.Header.Get("x-test"), "Hooked header")
 }
 
-func TestNewJsonForm(t *testing.T) {
+func TestNewFormPost(t *testing.T) {
 	a := assert.NewAssert(t)
 
 	v := url.Values{}
-	req, err := NewJsonForm("/", v, nil)
+	req, err := NewFormPost("/", v, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestNewJsonForm(t *testing.T) {
 	body, _ := ioutil.ReadAll(req.Body)
 	a.Equal(v.Encode(), string(body), "Body encoded")
 
-	req, err = NewJsonPost("/", v, addTestHeader)
+	req, err = NewFormPost("/", v, addTestHeader)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -359,7 +359,7 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 
 	for _, test := range tests {
 		server := httptest.NewServer(test.h)
-		n, status, body, err := testTimeoutClient.PostJsonWithRetry(server.URL, testContent{"foo"}, test.tries, nil)
+		n, status, body, err := testTimeoutClient.PostJSONWithRetry(server.URL, testContent{"foo"}, test.tries, nil)
 		if test.expectTimeout {
 			if err != nil {
 				a.Equal(true, IsTimeoutErr(err), "Should be")
@@ -380,7 +380,7 @@ func TestSafeClient_PostJsonWithRetry(t *testing.T) {
 
 	// hooked case
 	server := httptest.NewServer(CheckHeaderHandler("x-test", "test"))
-	n, status, _, err := testTimeoutClient.PostJsonWithRetry(server.URL, testContent{"foo"}, 3, addTestHeader)
+	n, status, _, err := testTimeoutClient.PostJSONWithRetry(server.URL, testContent{"foo"}, 3, addTestHeader)
 	if err != nil {
 		t.Errorf("Error request: %s", err)
 	}

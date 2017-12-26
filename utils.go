@@ -16,9 +16,9 @@ import (
 // RequestHook can modify the Request anyway it wants.
 type RequestHook func(req *http.Request)
 
-// NewJsonPost returns a Request with json encoded and header set;
+// NewJSONPost returns a Request with json encoded and header set;
 // additional headers or cookies can be set through the RequestHook.
-func NewJsonPost(url string, v interface{}, f RequestHook) (*http.Request, error) {
+func NewJSONPost(url string, v interface{}, f RequestHook) (*http.Request, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, err
@@ -38,8 +38,8 @@ func NewJsonPost(url string, v interface{}, f RequestHook) (*http.Request, error
 	return req, nil
 }
 
-// NewJsonForm returns a Request with default "Content-type: text/plain".
-func NewJsonForm(url string, v url.Values, f RequestHook) (*http.Request, error) {
+// NewFormPost returns a Request with default "Content-type: text/plain".
+func NewFormPost(url string, v url.Values, f RequestHook) (*http.Request, error) {
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(v.Encode())))
 	if err != nil {
 		return nil, err
@@ -200,8 +200,8 @@ func (c *SafeClient) DoRequest(method, url string, content []byte, maxTries int,
 	return
 }
 
-// PostJsonWithRetry is a convenient method for JSON POST requests.
-func (c *SafeClient) PostJsonWithRetry(url string, v interface{}, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
+// PostJSONWithRetry is a convenient method for JSON POST requests.
+func (c *SafeClient) PostJSONWithRetry(url string, v interface{}, maxTries int, f RequestHook) (tries, status int, body []byte, err error) {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return
