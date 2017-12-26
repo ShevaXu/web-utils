@@ -122,11 +122,12 @@ func (c *SafeClient) RequestWithClose(req *http.Request) (status int, body []byt
 	return
 }
 
-// RequestWithRetry wraps RequestWithClose and exponential-backoff retries in following conditions:
+// RequestWithRetry wraps RequestWithClose and exponential-backoff
+// retries in following conditions:
 // 1. timeout error occurs (mostly client-side);
 // 2. server-side should-retry statusCode returned.
 // It returns the last response if tries run out.
-// NOTICE: retry works for request with no body only.
+// NOTICE: retry works for request with no body only before go1.9.
 func (c *SafeClient) RequestWithRetry(req *http.Request, maxTries int) (tries, status int, body []byte, err error) {
 	// 0 will trigger setting wait to base
 	wait := 0
