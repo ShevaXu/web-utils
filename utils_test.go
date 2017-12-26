@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -266,7 +267,8 @@ func TestSafeClient_RequestWithRetry(t *testing.T) {
 }
 
 func TestSafeClient_RequestWithRetry_Bug(t *testing.T) {
-	if testing.Short() {
+	v := runtime.Version()
+	if strings.HasPrefix(v, "go") && string(v[2:5]) != "1.7" && string(v[2:5]) != "1.8" {
 		t.SkipNow()
 	}
 
