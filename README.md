@@ -5,6 +5,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/ShevaXu/web-utils)](https://goreportcard.com/report/github.com/ShevaXu/web-utils)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://choosealicense.com/licenses/mit/)
 
+[DEPRECATED] New features will be implemented in https://github.com/ShevaXu/golang.
+
 web-utils provides useful web-dev features following some best practices for production, including:
 
 ### HTTP Utils
